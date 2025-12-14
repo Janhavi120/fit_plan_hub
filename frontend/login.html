@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FitPlanHub</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar container">
+            <a href="index.html" class="logo">FitPlanHub</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="register.html">Sign Up</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="form-container">
+            <h2 style="text-align: center; margin-bottom: 30px;">Welcome Back</h2>
+            
+            <div id="message" class="message" style="display: none;"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">I am a:</label>
+                    <select id="role" class="form-control">
+                        <option value="user">Fitness Enthusiast</option>
+                        <option value="trainer">Certified Trainer</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn" style="width: 100%;">Login</button>
+            </form>
+            
+            <p style="text-align: center; margin-top: 20px;">
+                Don't have an account? <a href="register.html">Sign up here</a>
+            </p>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, role })
+                });
+                
+                const data = await response.json();
+                
+                const messageDiv = document.getElementById('message');
+                messageDiv.style.display = 'block';
+                
+                if (response.ok) {
+                    // Store token in localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = 'Login successful! Redirecting...';
+                    
+                    // Redirect based on role
+                    setTimeout(() => {
+                        if (data.user.role === 'trainer') {
+                            window.location.href = 'trainer-dashboard.html';
+                        } else {
+                            window.location.href = 'user-feed.html';
+                        }
+                    }, 1500);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = data.error || 'Login failed';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                const messageDiv = document.getElementById('message');
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'message error';
+                messageDiv.textContent = 'Network error. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>

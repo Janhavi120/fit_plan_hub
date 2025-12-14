@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Details - FitPlanHub</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar container">
+            <a href="index.html" class="logo">FitPlanHub</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="#" id="backLink">Back</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="plan-details">
+            <!-- Plan details will be loaded here -->
+        </div>
+    </main>
+
+    <script>
+        // Get plan ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('id');
+        
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        // Set back link
+        document.getElementById('backLink').href = user.role === 'trainer' 
+            ? 'trainer-dashboard.html' 
+            : (user.id ? 'user-feed.html' : 'index.html');
+        
+        async function loadPlanDetails() {
+            if (!planId) {
+                document.getElementById('plan-details').innerHTML = '<p>Plan not found</p>';
+                return;
+            }
+            
+            try {
+                const headers = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`http://localhost:5000/api/plans/${planId}`, {
+                    headers: headers
+                });
+                
+                const plan = await response.json();
+                const container = document.getElementById('plan-details');
+                
+                if (plan.has_access === false) {
+                    // Preview mode for non-subscribers
+                    container.innerHTML = `
+                        <div class="plan-card" style="max-width: 800px; margin: 40px auto;">
+                            <h2 class="plan-title">${plan.title}</h2>
+                            <p class="plan-trainer">By: ${plan.trainer_name}</p>
+                            <p class="plan-price">$${plan.price}</p>
+                            <p>Duration: ${plan.duration_days} days</p>
+                            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <p style="color: #718096; font-style: italic;">
+                                    ${plan.message || 'Subscribe to view full plan details'}
+                                </p>
+                            </div>
+                            ${token ? 
+                                `<button onclick="subscribePlan(${plan.id})" class="btn btn-secondary">
+                                    Subscribe Now for $${plan.price}
+                                </button>` :
+                                `<a href="login.html" class="btn">Login to Subscribe</a>`
+                            }
+                        </div>
+                    `;
+                } else {
+                    // Full access mode
+                    container.innerHTML = `
+                        <div class="plan-card" style="max-width: 800px; margin: 40px auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2 class="plan-title">${plan.title}</h2>
+                                ${plan.is_subscribed ? 
+                                    '<span style="background: #48bb78; color: white; padding: 5px 15px; border-radius: 20px;">Subscribed ✓</span>' : ''}
+                            </div>
+                            <p class="plan-trainer">By: ${plan.trainer_name}</p>
+                            <p class="plan-price">$${plan.price}</p>
+                            <p><strong>Duration:</strong> ${plan.duration_days} days</p>
+                            
+                            <div style="margin: 30px 0;">
+                                <h3>Plan Description</h3>
+                                <p style="white-space: pre-line; line-height: 1.8;">${plan.description}</p>
+                            </div>
+                            
+                            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+                                ${!plan.is_subscribed && !plan.is_owner ? 
+                                    `<button onclick="subscribePlan(${plan.id})" class="btn btn-secondary">
+                                        Get This Plan for $${plan.price}
+                                    </button>` : ''}
+                                
+                                ${plan.is_owner ? 
+                                    `<button onclick="editPlan(${plan.id})" class="btn">Edit Plan</button>
+                                     <button onclick="deletePlan(${plan.id})" class="btn btn-danger" style="margin-left: 10px;">
+                                        Delete Plan
+                                     </button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error loading plan:', error);
+                document.getElementById('plan-details').innerHTML = '<p>Error loading plan details</p>';
+            }
+        }
+        
+        async function subscribePlan(planId) {
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/subscribe/${planId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Subscription successful!');
+                    loadPlanDetails(); // Refresh page
+                } else {
+                    alert(data.error || 'Subscription failed');
+                }
+            } catch (error) {
+                console.error('Subscription error:', error);
+                alert('Network error');
+            }
+        }
+        
+        function editPlan(planId) {
+            alert('Edit feature coming soon!');
+        }
+        
+        function deletePlan(planId) {
+            if (confirm('Are you sure you want to delete this plan?')) {
+                fetch(`http://localhost:5000/api/plans/${planId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Plan deleted');
+                        window.location.href = 'trainer-dashboard.html';
+                    } else {
+                        alert('Failed to delete');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    alert('Network error');
+                });
+            }
+        }
+        
+        // Load plan on page load
+        window.addEventListener('DOMContentLoaded', loadPlanDetails);
+    </script>
+</body>
+</html>

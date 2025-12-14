@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitPlanHub - Find Your Perfect Fitness Plan</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar container">
+            <a href="index.html" class="logo">FitPlanHub</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="login.html">Login</a>
+                <a href="register.html">Sign Up</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero" style="text-align: center; padding: 60px 20px;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 20px;">Transform Your Fitness Journey</h1>
+            <p style="font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto 30px;">
+                Connect with certified trainers and follow personalized fitness plans
+            </p>
+            <a href="register.html" class="btn">Get Started Free</a>
+        </section>
+
+        <section class="plans-section" style="margin: 60px 0;">
+            <h2 style="text-align: center; margin-bottom: 40px;">Popular Fitness Plans</h2>
+            <div id="plans-container">
+                <!-- Plans will be loaded here by JavaScript -->
+                <div style="text-align: center; padding: 40px;">
+                    <p>Loading available plans...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer style="text-align: center; padding: 30px; background: #2d3748; color: white; margin-top: 60px;">
+        <p>© 2024 FitPlanHub. All rights reserved.</p>
+    </footer>
+
+    <script src="scripts.js"></script>
+    <script>
+        // Load plans on page load
+        window.addEventListener('DOMContentLoaded', loadPlans);
+        
+        async function loadPlans() {
+            try {
+                const response = await fetch('http://localhost:5000/api/plans');
+                const plans = await response.json();
+                
+                const container = document.getElementById('plans-container');
+                container.innerHTML = '';
+                
+                plans.forEach(plan => {
+                    const planCard = `
+                        <div class="plan-card">
+                            <h3 class="plan-title">${plan.title}</h3>
+                            <p class="plan-trainer">By: ${plan.trainer_name}</p>
+                            <p class="plan-price">$${plan.price}</p>
+                            <p>${plan.duration_days} days plan</p>
+                            <a href="plan.html?id=${plan.id}" class="btn" style="margin-top: 15px;">View Details</a>
+                        </div>
+                    `;
+                    container.innerHTML += planCard;
+                });
+            } catch (error) {
+                console.error('Error loading plans:', error);
+            }
+        }
+    </script>
+</body>
+</html>

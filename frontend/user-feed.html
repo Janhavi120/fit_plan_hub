@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Feed - FitPlanHub</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar container">
+            <a href="index.html" class="logo">FitPlanHub</a>
+            <div class="nav-links">
+                <a href="user-feed.html">My Feed</a>
+                <a href="index.html">Browse Plans</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h1>Your Personalized Feed</h1>
+            <span id="userName"></span>
+        </div>
+        
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <section style="margin: 40px 0;">
+            <h2 style="margin-bottom: 20px;">Plans from Trainers You Follow</h2>
+            <div id="feed-plans">
+                <!-- Feed plans will be loaded here -->
+            </div>
+        </section>
+        
+        <section style="margin: 40px 0;">
+            <h2 style="margin-bottom: 20px;">Your Subscriptions</h2>
+            <div id="my-subscriptions">
+                <!-- Subscriptions will be loaded here -->
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token || user.role !== 'user') {
+            window.location.href = 'login.html';
+        }
+        
+        document.getElementById('userName').textContent = `Hello, ${user.name}`;
+        
+        // Load feed
+        async function loadFeed() {
+            try {
+                const response = await fetch('http://localhost:5000/api/feed', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                // Display feed plans
+                const feedContainer = document.getElementById('feed-plans');
+                if (data.feed.length === 0) {
+                    feedContainer.innerHTML = '<p>Follow some trainers to see their plans here!</p>';
+                } else {
+                    feedContainer.innerHTML = data.feed.map(plan => `
+                        <div class="plan-card">
+                            <h3 class="plan-title">${plan.title}</h3>
+                            <p class="plan-trainer">By: ${plan.trainer_name}</p>
+                            <p class="plan-price">$${plan.price}</p>
+                            <p>${plan.duration_days} days</p>
+                            <button onclick="viewPlan(${plan.id})" class="btn">View Plan</button>
+                            <button onclick="subscribePlan(${plan.id})" class="btn btn-secondary" style="margin-left: 10px;">
+                                Subscribe Now
+                            </button>
+                        </div>
+                    `).join('');
+                }
+                
+                // Display subscriptions
+                const subContainer = document.getElementById('my-subscriptions');
+                if (data.subscriptions.length === 0) {
+                    subContainer.innerHTML = '<p>You haven\'t subscribed to any plans yet.</p>';
+                } else {
+                    subContainer.innerHTML = data.subscriptions.map(plan => `
+                        <div class="plan-card">
+                            <h3 class="plan-title">${plan.title} ✅</h3>
+                            <p class="plan-trainer">By: ${plan.trainer_name}</p>
+                            <p class="plan-price">$${plan.price}</p>
+                            <p>${plan.duration_days} days plan</p>
+                            <p style="color: #48bb78; font-weight: bold;">✓ Subscribed</p>
+                            <button onclick="viewPlan(${plan.id})" class="btn">View Details</button>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading feed:', error);
+            }
+        }
+        
+        async function viewPlan(planId) {
+            window.location.href = `plan.html?id=${planId}`;
+        }
+        
+        async function subscribePlan(planId) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/subscribe/${planId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Subscription successful!');
+                    loadFeed(); // Refresh feed
+                } else {
+                    alert(data.error || 'Subscription failed');
+                }
+            } catch (error) {
+                console.error('Subscription error:', error);
+                alert('Network error');
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+        
+        // Load feed on page load
+        window.addEventListener('DOMContentLoaded', loadFeed);
+    </script>
+</body>
+</html>
